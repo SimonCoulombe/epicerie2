@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Épicerie — Suivi des prix</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <header>
+        <h1>🍓 Épicerie — Suivi des prix</h1>
+        <p class="subtitle">Comparez les prix en épicerie au Québec</p>
+    </header>
+
+    <main>
+        <section class="controls">
+            <div class="control-group">
+                <label for="product-select">Produit</label>
+                <select id="product-select" multiple></select>
+            </div>
+            <div class="control-group">
+                <label for="city-select">Ville</label>
+                <select id="city-select" multiple></select>
+            </div>
+            <div class="control-group">
+                <label for="chain-select">Bannière</label>
+                <select id="chain-select" multiple></select>
+            </div>
+            <div class="control-group">
+                <label for="date-from">Du</label>
+                <input type="date" id="date-from">
+            </div>
+            <div class="control-group">
+                <label for="date-to">Au</label>
+                <input type="date" id="date-to">
+            </div>
+            <button id="btn-search" type="button">Rechercher</button>
+        </section>
+
+        <section class="chart-container">
+            <div id="price-chart"></div>
+        </section>
+
+        <section class="table-container">
+            <h2>Données brutes</h2>
+            <table id="price-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Produit</th>
+                        <th>Bannière</th>
+                        <th>Ville</th>
+                        <th>Prix</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+    </main>
+
+    <footer>
+        <p>Données collectées automatiquement — <a href="https://github.com">Code source</a></p>
+    </footer>
+
+    <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+[Unit]
+Description=Épicerie Price Tracker API (FastAPI + Uvicorn)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/epicerie2
+ExecStart=/home/ubuntu/epicerie2/venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/home/ubuntu/epicerie2/logs/api.log
+StandardError=append:/home/ubuntu/epicerie2/logs/api.log
+
+[Install]
+WantedBy=multi-user.target

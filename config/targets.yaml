@@ -1,0 +1,51 @@
+products:
+  - name: "Fraises 454g"
+    slug: "fraises-454g"
+
+cities:
+  - name: "Default"
+    slug: "default"
+
+stores:
+  - chain: "Super C"
+    city: "default"
+    address: null
+    postal_code: null
+    slug: "superc-default"
+  - chain: "Maxi"
+    city: "default"
+    address: null
+    postal_code: null
+    slug: "maxi-default"
+  - chain: "Metro"
+    city: "default"
+    address: null
+    postal_code: null
+    slug: "metro-default"
+  - chain: "IGA"
+    city: "default"
+    address: null
+    postal_code: null
+    slug: "iga-default"
+
+targets:
+  - product: "fraises-454g"
+    store: "superc-default"
+    url: "https://www.superc.ca/allees/fruits-et-legumes/fruits/baies-et-cerises/fraises/p/665290001184"
+    use_playwright: true
+    parser: "superc"
+  - product: "fraises-454g"
+    store: "maxi-default"
+    url: "https://www.maxi.ca/fr/fraises-1-lb/p/20049778001_EA"
+    use_playwright: true
+    parser: "maxi"
+  - product: "fraises-454g"
+    store: "metro-default"
+    url: "https://www.metro.ca/epicerie-en-ligne/allees/fruits-et-legumes/fruits/baies-et-cerises/fraises/p/665290001184"
+    use_playwright: true
+    parser: "metro"
+  - product: "fraises-454g"
+    store: "iga-default"
+    url: "https://www.iga.ca/fr/produits/fraises-454-g"
+    use_playwright: false
+    parser: "iga"
