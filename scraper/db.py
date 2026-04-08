@@ -10,6 +10,8 @@ import duckdb
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "epicerie.duckdb"
 CSV_PATH = Path(__file__).resolve().parent.parent / "prix_fraises.csv"
+PRODUCTS_CSV = Path(__file__).resolve().parent.parent / "config" / "products.csv"
+TARGETS_CSV = Path(__file__).resolve().parent.parent / "config" / "targets.csv"
 
 
 def get_connection(read_only: bool = False) -> duckdb.DuckDBPyConnection:
@@ -18,10 +20,11 @@ def get_connection(read_only: bool = False) -> duckdb.DuckDBPyConnection:
 
 
 def init_db() -> None:
-    """Create tables if they don't exist and migrate CSV data."""
+    """Create tables if they don't exist, run schema migrations, and migrate CSV data."""
     con = get_connection()
     try:
         _create_tables(con)
+        _migrate_schema(con)
         _migrate_csv(con)
     finally:
         con.close()
@@ -33,7 +36,10 @@ def _create_tables(con: duckdb.DuckDBPyConnection) -> None:
         CREATE TABLE IF NOT EXISTS products (
             id INTEGER DEFAULT nextval('seq_products') PRIMARY KEY,
             name VARCHAR NOT NULL,
-            slug VARCHAR UNIQUE NOT NULL
+            slug VARCHAR UNIQUE NOT NULL,
+            category VARCHAR,
+            cpi_name VARCHAR,
+            unit VARCHAR
         );
 
         CREATE SEQUENCE IF NOT EXISTS seq_store_chains START 1;
@@ -67,6 +73,10 @@ def _create_tables(con: duckdb.DuckDBPyConnection) -> None:
             url VARCHAR NOT NULL,
             use_playwright BOOLEAN DEFAULT TRUE,
             active BOOLEAN DEFAULT TRUE,
+            parser VARCHAR DEFAULT 'auto',
+            last_success DATE,
+            fail_count INTEGER DEFAULT 0,
+            product_title VARCHAR,
             UNIQUE(product_id, store_id)
         );
 
@@ -76,10 +86,32 @@ def _create_tables(con: duckdb.DuckDBPyConnection) -> None:
             scrape_target_id INTEGER REFERENCES scrape_targets(id),
             date DATE NOT NULL,
             price DECIMAL(8,2),
+            price_unit VARCHAR DEFAULT 'each',
+            price_per_kg DECIMAL(8,2),
             scraped_at TIMESTAMP DEFAULT current_timestamp,
             UNIQUE(scrape_target_id, date)
         );
     """)
+
+
+def _migrate_schema(con: duckdb.DuckDBPyConnection) -> None:
+    """Add new columns to existing tables (idempotent for existing DBs)."""
+    migrations = [
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS category VARCHAR",
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS cpi_name VARCHAR",
+        "ALTER TABLE products ADD COLUMN IF NOT EXISTS unit VARCHAR",
+        "ALTER TABLE scrape_targets ADD COLUMN IF NOT EXISTS parser VARCHAR DEFAULT 'auto'",
+        "ALTER TABLE scrape_targets ADD COLUMN IF NOT EXISTS last_success DATE",
+        "ALTER TABLE scrape_targets ADD COLUMN IF NOT EXISTS fail_count INTEGER DEFAULT 0",
+        "ALTER TABLE prices ADD COLUMN IF NOT EXISTS price_unit VARCHAR DEFAULT 'each'",
+        "ALTER TABLE prices ADD COLUMN IF NOT EXISTS price_per_kg DECIMAL(8,2)",
+        "ALTER TABLE scrape_targets ADD COLUMN IF NOT EXISTS product_title VARCHAR",
+    ]
+    for sql in migrations:
+        try:
+            con.execute(sql)
+        except duckdb.CatalogException:
+            pass  # column already exists
 
 
 # Mapping from CSV store names to chain/slug used in the YAML config
@@ -132,26 +164,46 @@ def _migrate_csv(con: duckdb.DuckDBPyConnection) -> None:
 
 
 def sync_targets(config: dict) -> None:
-    """Sync YAML config into DB tables (products, cities, store_chains, stores, scrape_targets)."""
+    """Sync config into DB tables.
+
+    - Products come from config/products.csv (with category, cpi_name, unit).
+    - Scrape targets come from config/targets.csv.
+    - Stores, cities, and store_chains come from the YAML config dict.
+    """
     con = get_connection()
     try:
         _create_tables(con)
+        _migrate_schema(con)
 
-        # Insert products (skip existing)
-        for p in config.get("products", []):
-            con.execute("""
-                INSERT INTO products (name, slug) VALUES (?, ?)
-                ON CONFLICT (slug) DO NOTHING
-            """, [p["name"], p["slug"]])
+        # ── Products from CSV ──────────────────────────────────────────
+        if PRODUCTS_CSV.exists():
+            with open(PRODUCTS_CSV, newline="", encoding="utf-8") as f:
+                for p in csv.DictReader(f):
+                    existing = con.execute(
+                        "SELECT id FROM products WHERE slug = ?", [p["slug"]]
+                    ).fetchone()
+                    if existing:
+                        con.execute("""
+                            UPDATE products
+                            SET name = ?, category = ?, cpi_name = ?, unit = ?
+                            WHERE slug = ?
+                        """, [p["name"], p.get("category"), p.get("cpi_name"),
+                              p.get("unit"), p["slug"]])
+                    else:
+                        con.execute("""
+                            INSERT INTO products (name, slug, category, cpi_name, unit)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, [p["name"], p["slug"], p.get("category"),
+                              p.get("cpi_name"), p.get("unit")])
 
-        # Insert cities (skip existing)
+        # ── Cities from YAML ──────────────────────────────────────────
         for c in config.get("cities", []):
             con.execute("""
                 INSERT INTO cities (name, slug) VALUES (?, ?)
                 ON CONFLICT (slug) DO NOTHING
             """, [c["name"], c["slug"]])
 
-        # Insert store chains (skip existing)
+        # ── Store chains from YAML ────────────────────────────────────
         chain_names = {s["chain"] for s in config.get("stores", [])}
         for name in chain_names:
             con.execute("""
@@ -159,7 +211,7 @@ def sync_targets(config: dict) -> None:
                 ON CONFLICT (name) DO NOTHING
             """, [name])
 
-        # Insert stores (skip existing)
+        # ── Stores from YAML ─────────────────────────────────────────
         for s in config.get("stores", []):
             chain_id = con.execute(
                 "SELECT id FROM store_chains WHERE name = ?", [s["chain"]]
@@ -173,28 +225,36 @@ def sync_targets(config: dict) -> None:
                 ON CONFLICT (slug) DO NOTHING
             """, [chain_id, city_id, s.get("address"), s.get("postal_code"), s["slug"]])
 
-        # Insert scrape targets (skip existing, update url/playwright on conflict)
-        for t in config.get("targets", []):
-            product_id = con.execute(
-                "SELECT id FROM products WHERE slug = ?", [t["product"]]
-            ).fetchone()[0]
-            store_id = con.execute(
-                "SELECT id FROM stores WHERE slug = ?", [t["store"]]
-            ).fetchone()[0]
-            existing = con.execute(
-                "SELECT id FROM scrape_targets WHERE product_id = ? AND store_id = ?",
-                [product_id, store_id]
-            ).fetchone()
-            if existing:
-                con.execute("""
-                    UPDATE scrape_targets SET url = ?, use_playwright = ?
-                    WHERE id = ?
-                """, [t["url"], t.get("use_playwright", True), existing[0]])
-            else:
-                con.execute("""
-                    INSERT INTO scrape_targets (product_id, store_id, url, use_playwright, active)
-                    VALUES (?, ?, ?, ?, TRUE)
-                """, [product_id, store_id, t["url"], t.get("use_playwright", True)])
+        # ── Scrape targets from CSV ───────────────────────────────────
+        if TARGETS_CSV.exists():
+            with open(TARGETS_CSV, newline="", encoding="utf-8") as f:
+                for t in csv.DictReader(f):
+                    product_row = con.execute(
+                        "SELECT id FROM products WHERE slug = ?", [t["product_slug"]]
+                    ).fetchone()
+                    store_row = con.execute(
+                        "SELECT id FROM stores WHERE slug = ?", [t["store_slug"]]
+                    ).fetchone()
+                    if product_row is None or store_row is None:
+                        continue
+                    product_id, store_id = product_row[0], store_row[0]
+                    use_pw = t.get("use_playwright", "true").lower() == "true"
+                    parser = t.get("parser", "auto")
+
+                    existing = con.execute(
+                        "SELECT id FROM scrape_targets WHERE product_id = ? AND store_id = ?",
+                        [product_id, store_id]
+                    ).fetchone()
+                    if existing:
+                        con.execute("""
+                            UPDATE scrape_targets SET url = ?, use_playwright = ?, parser = ?
+                            WHERE id = ?
+                        """, [t["url"], use_pw, parser, existing[0]])
+                    else:
+                        con.execute("""
+                            INSERT INTO scrape_targets (product_id, store_id, url, use_playwright, active, parser)
+                            VALUES (?, ?, ?, ?, TRUE, ?)
+                        """, [product_id, store_id, t["url"], use_pw, parser])
 
         # Now migrate CSV data (after targets exist)
         _migrate_csv(con)
@@ -202,17 +262,20 @@ def sync_targets(config: dict) -> None:
         con.close()
 
 
-def upsert_price(scrape_target_id: int, row_date: date, price: float | None) -> None:
+def upsert_price(scrape_target_id: int, row_date: date, price: float | None,
+                 price_unit: str = "each", price_per_kg: float | None = None) -> None:
     """Insert or update a price for a given target and date."""
     con = get_connection()
     try:
         con.execute("""
-            INSERT INTO prices (scrape_target_id, date, price, scraped_at)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO prices (scrape_target_id, date, price, price_unit, price_per_kg, scraped_at)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT (scrape_target_id, date) DO UPDATE SET
                 price = excluded.price,
+                price_unit = excluded.price_unit,
+                price_per_kg = excluded.price_per_kg,
                 scraped_at = excluded.scraped_at
-        """, [scrape_target_id, row_date, price, datetime.now()])
+        """, [scrape_target_id, row_date, price, price_unit, price_per_kg, datetime.now()])
     finally:
         con.close()
 
@@ -230,7 +293,8 @@ def get_active_targets() -> list[dict]:
                 c.slug AS city_slug,
                 s.slug AS store_slug,
                 st.url,
-                st.use_playwright
+                st.use_playwright,
+                st.parser
             FROM scrape_targets st
             JOIN products p ON st.product_id = p.id
             JOIN stores s ON st.store_id = s.id
@@ -239,7 +303,35 @@ def get_active_targets() -> list[dict]:
             WHERE st.active = TRUE
         """).fetchall()
         columns = ["target_id", "product_slug", "product_name", "chain_name",
-                    "city_slug", "store_slug", "url", "use_playwright"]
+                    "city_slug", "store_slug", "url", "use_playwright", "parser"]
         return [dict(zip(columns, row)) for row in rows]
+    finally:
+        con.close()
+
+
+def update_target_status(target_id: int, success: bool,
+                         product_title: str | None = None) -> None:
+    """Update last_success/fail_count (and optionally product_title) after a scrape."""
+    con = get_connection()
+    try:
+        if success:
+            if product_title:
+                con.execute("""
+                    UPDATE scrape_targets
+                    SET last_success = current_date, fail_count = 0, product_title = ?
+                    WHERE id = ?
+                """, [product_title, target_id])
+            else:
+                con.execute("""
+                    UPDATE scrape_targets
+                    SET last_success = current_date, fail_count = 0
+                    WHERE id = ?
+                """, [target_id])
+        else:
+            con.execute("""
+                UPDATE scrape_targets
+                SET fail_count = COALESCE(fail_count, 0) + 1
+                WHERE id = ?
+            """, [target_id])
     finally:
         con.close()

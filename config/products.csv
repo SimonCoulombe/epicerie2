@@ -1,0 +1,194 @@
+slug,name,category,cpi_name,unit
+fraises-454g,Fraises 454g,Fruits frais,Fraises fraîches,454g
+bananes,Bananes,Fruits frais,Bananes,1kg
+bleuets-frais,Bleuets frais,Fruits frais,Bleuets frais,170g
+pommes,Pommes,Fruits frais,Pommes,3lb
+oranges,Oranges,Fruits frais,Oranges,4lb
+raisins-frais,Raisins frais,Fruits frais,Raisins frais,1kg
+ananas,Ananas,Fruits frais,Ananas,1u
+cantaloup,Cantaloup,Fruits frais,Cantaloup,1u
+avocats,Avocats,Fruits frais,Avocats,1u
+poires-fraiches,Poires fraîches,Fruits frais,Poires fraîches,1kg
+mandarines,Mandarines,Fruits frais,Mandarines,2lb
+pamplemousse,Pamplemousse,Fruits frais,Pamplemousse,1u
+citron,Citron,Fruits frais,Citron,1u
+framboises-fraiches,Framboises fraîches,Fruits frais,Framboises fraîches,170g
+tomates-fraiches,Tomates fraîches,Légumes frais,Tomates fraîches (diverses variétés),1kg
+concombre,Concombre,Légumes frais,Concombre,1u
+carottes,Carottes,Légumes frais,Carottes,2lb
+brocoli,Brocoli,Légumes frais,Brocoli,1u
+laitue-iceberg,Laitue Iceberg,Légumes frais,Laitue Iceberg,1u
+laitue-romaine,Laitue romaine,Légumes frais,Laitue romaine,1u
+oignons,Oignons,Légumes frais,Oignons,3lb
+celeri,Céleri,Légumes frais,Céleri,1u
+poivrons-verts,Poivrons verts,Légumes frais,Poivrons verts,1u
+poivrons-rouges,Poivrons rouges,Légumes frais,Poivrons rouges,1u
+pommes-de-terre,Pommes de terre,Légumes frais,Pommes de terre,5lb
+patates-douces,Patates douces,Légumes frais,Patates douces/ignames,1kg
+champignons-blancs,Champignons blancs frais,Légumes frais,Champignons blancs frais,227g
+chou,Chou,Légumes frais,Chou,1u
+chou-fleur,Chou-fleur,Légumes frais,Chou-fleur,1u
+asperges-fraiches,Asperges fraîches,Légumes frais,Asperges fraîches,1lb
+haricots-verts-frais,Haricots verts frais,Légumes frais,Haricots verts frais,1lb
+ail-frais,Ail frais,Légumes frais,Ail frais,1u
+navets,Navets,Légumes frais,Navets/rutabagas,1u
+salade-emballee,Salade emballée,Légumes frais,Salade emballée,312g
+boeuf-hache,Bœuf haché,Viandes fraîches,Bœuf haché,1kg
+bifteck-contre-filet,Bifteck de contre-filet,Viandes fraîches,Bifteck de contre-filet,1kg
+bifteck-surlonge,Bifteck de surlonge,Viandes fraîches,Bifteck de surlonge,1kg
+bifteck-interieur-ronde,Bifteck d'intérieur de ronde,Viandes fraîches,Bifteck d'intérieur de ronde,1kg
+boeuf-a-ragout,Bœuf à ragoût,Viandes fraîches,Bœuf à ragoût,1kg
+roti-cote-boeuf,Rôti de côte de bœuf,Viandes fraîches,Rôti de côte de bœuf,1kg
+roti-palette-boeuf,Rôti de palette de bœuf,Viandes fraîches,Rôti de palette de bœuf,1kg
+porc-hache,Porc haché,Viandes fraîches,Porc haché,1kg
+cotelettes-longe-porc,Côtelettes de longe de porc,Viandes fraîches,Côtelettes de longe de porc,1kg
+cotelettes-porc,Côtelettes de porc,Viandes fraîches,Côtelettes de porc,1kg
+roti-epaule-porc,Rôti d'épaule de porc,Viandes fraîches,Rôti d'épaule de porc,1kg
+roti-longe-porc,Rôti de longe de porc,Viandes fraîches,Rôti de longe de porc,1kg
+poulet-entier,Poulet entier,Viandes fraîches,Poulet entier,1u
+poitrine-poulet,Poitrine de poulet,Viandes fraîches,Poitrine de poulet,1kg
+pilons-poulet,Pilons de poulet,Viandes fraîches,Pilons de poulet,1kg
+haut-cuisses-poulet,Haut de cuisses de poulet,Viandes fraîches,Haut de cuisses de poulet,1kg
+ailes-poulet-surgelees,Ailes de poulet surgelées,Viandes fraîches,Ailes de poulet surgelées,1kg
+dinde-entiere,Dinde entière,Viandes fraîches,Dinde entière,1u
+dinde-hachee,Dinde hachée,Viandes fraîches,Dinde hachée,450g
+gigot-agneau,Gigot d'agneau rôti,Viandes fraîches,Gigot d'agneau rôti,1kg
+saucisse-porc,Saucisse de porc,Viandes fraîches,Saucisse de porc,450g
+jambon,Jambon,Viandes fraîches,Jambon,1kg
+tranches-bacon,Tranches de bacon,Charcuteries,Tranches de bacon,375g
+tranches-jambon-cuit,Tranches de jambon cuit,Charcuteries,Tranches de jambon cuit emballées,175g
+tranches-viande-cuite,Tranches de viande cuite,Charcuteries,Tranches de viande cuite emballées,175g
+saucisses-fumees,Saucisses fumées,Charcuteries,Saucisses fumées,375g
+saucisse-salami,Saucisse de salami,Charcuteries,Saucisse de salami,175g
+pate-foie,Pâté de foie,Charcuteries,Pâté de foie d'animaux en conserve,150g
+filets-saumon-frais,Filets de saumon frais,Poissons et fruits de mer,Filets de saumon frais,1kg
+truite,Truite,Poissons et fruits de mer,Truite fraîche ou surgelée,1kg
+filets-aiglefin-surgeles,Filets d'aiglefin surgelés,Poissons et fruits de mer,Filets d'aiglefin surgelés,400g
+filets-morue-surgeles,Filets de morue surgelés,Poissons et fruits de mer,Filets de morue surgelés,400g
+filets-sole-surgeles,Filets de sole surgelés,Poissons et fruits de mer,Filets de sole surgelés,400g
+filets-tilapia,Filets de tilapia,Poissons et fruits de mer,Filets de tilapia,400g
+filets-poisson-panes,Filets de poisson panés,Poissons et fruits de mer,Filets de poisson panés,700g
+batonets-poisson,Bâtonnets de poisson surgelés,Poissons et fruits de mer,Bâtonnets de poisson surgelés,700g
+crevettes-surgelees-crues,Crevettes surgelées crues,Poissons et fruits de mer,Crevettes surgelées (crues),400g
+crevettes-surgelees-cuites,Crevettes surgelées cuites,Poissons et fruits de mer,Crevettes surgelées (cuites),340g
+petoncles,Pétoncles,Poissons et fruits de mer,Pétoncles,340g
+saumon-conserve,Saumon en conserve,Poissons et fruits de mer,Saumon en conserve,213g
+thon-conserve,Thon en conserve,Poissons et fruits de mer,Thon en conserve,170g
+saumon-fume,Saumon fumé,Poissons et fruits de mer,Saumon fumé,150g
+lait-homogenise,Lait homogénéisé,Produits laitiers,Lait homogénéisé,2L
+lait-2pct-2l,Lait 2% 2L,Produits laitiers,Lait partiellement écrémé,2L
+lait-chocolat,Lait au chocolat,Produits laitiers,Lait au chocolat,1L
+lait-amande,Lait d'amande,Produits laitiers,Lait d'amande,1.89L
+lait-avoine,Lait d'avoine,Produits laitiers,Lait d'avoine,1.89L
+beurre-454g,Beurre 454g,Produits laitiers,Beurre,454g
+margarine,Margarine,Produits laitiers,Margarine,454g
+creme-sure,Crème sure,Produits laitiers,Crème sure,500ml
+creme-glacee,Crème glacée,Produits laitiers,Crème glacée,1.5L
+creme-glacee-individuelle,Crème glacée individuelle,Produits laitiers,Crème glacée individuelle,1u
+creme-a-cafe,Crème à café,Produits laitiers,Crème à café,473ml
+fromage-cheddar,Fromage cheddar,Produits laitiers,Fromage cheddar,400g
+fromage-mozzarella,Fromage mozzarella,Produits laitiers,Fromage mozzarella,400g
+fromage-cottage,Fromage cottage en crème,Produits laitiers,Fromage cottage en crème,500g
+fromage-chevre,Fromage de chèvre frais,Produits laitiers,Fromage de chèvre frais,200g
+fromage-tranches,Fromage en tranches,Produits laitiers,Fromage en tranches,400g
+parmesan,Parmesan,Produits laitiers,Parmesan,250g
+fromage-creme,Fromage à la crème,Produits laitiers,Fromage à la crème,250g
+yogourt,Yogourt,Produits laitiers,Yogourt,650g
+lait-evapore,Lait évaporé,Produits laitiers,Lait évaporé,354ml
+oeufs-gros-12,Oeufs gros 12,Oeufs,Oeufs gros,dz
+pain-blanc-675g,Pain blanc 675g,Boulangerie,Pain blanc,675g
+pain-boulangerie,Pain boulangerie,Boulangerie,Pain boulangerie,1u
+pain-croustillant,Pain croustillant,Boulangerie,Pain croustillant,250g
+pain-plat,Pain plat,Boulangerie,Pain plat,1pkg
+pains-hamburger,Pains à hamburger,Boulangerie,Pains à hamburger,8u
+bagels,Bagels,Boulangerie,Bagels,6u
+muffins-son,Muffins au son,Boulangerie,Muffins au son,6u
+beignes,Beignes,Boulangerie,Beignes,6u
+tarte-fruits,Tarte aux fruits,Boulangerie,Tarte aux fruits,1u
+gateau-glace-surgele,Gâteau glacé surgelé,Boulangerie,Gâteau glacé surgelé,1u
+farine-blanche,Farine blanche,Boulangerie,Farine blanche,2.5kg
+farine-ble-entier,Farine de blé entier,Boulangerie,Farine de blé entier,2.5kg
+pates-seches-900g,Pâtes sèches 900g,Boulangerie,Pâtes sèches,900g
+riz-long-grain,Riz à long grain,Boulangerie,Riz à long grain,2kg
+cereales-chaudes,Céréales chaudes,Boulangerie,Céréales chaudes pour petit déjeuner,1kg
+cereales-froides,Céréales froides,Boulangerie,Céréales froides de petit déjeuner,500g
+barres-granolas,Barres granolas,Boulangerie,Barres granolas,6u
+craquelins,Craquelins,Boulangerie,Craquelins,225g
+croutons,Croûtons,Boulangerie,Croûtons,140g
+tomates-conserve,Tomates en conserve,Conserves,Tomates en conserve,796ml
+mais-conserve,Maïs en conserve,Conserves,Maïs en conserve,341ml
+pois-conserve,Pois en conserve,Conserves,Pois en conserve,341ml
+haricots-verts-conserve,Haricots verts en conserve,Conserves,Haricots verts en conserve,341ml
+feves-au-lard,Fèves au lard en conserve,Conserves,Fèves au lard à la sauce tomate en conserve,398ml
+pois-chiches-conserve,Pois chiches en conserve,Conserves,Pois chiches en conserve,540ml
+fruits-conserve,Fruits en conserve,Conserves,Fruits en conserve,398ml
+jus-tomate,Jus de tomate,Conserves,Jus de tomate,1.36L
+jus-legumes,Jus de légumes,Conserves,Jus de légumes,1.36L
+soupe-legumes-conserve,Soupe aux légumes en conserve,Conserves,Soupe aux légumes en conserve,540ml
+soupe-viande-conserve,Soupe avec viande en conserve,Conserves,Soupe avec viande en conserve,540ml
+concentre-boeuf-poulet,Concentré de bœuf ou poulet,Conserves,Concentré de bœuf ou de poulet,900ml
+ketchup,Ketchup,Condiments,Ketchup aux tomates,1L
+moutarde,Moutarde,Condiments,Moutarde,325ml
+mayonnaise,Mayonnaise,Condiments,Mayonnaise,890ml
+sauce-spaghetti,Sauce à spaghetti,Condiments,Sauce à spaghetti régulière,650ml
+sauce-barbecue,Sauce barbecue,Condiments,Sauce barbecue,455ml
+sauce-piquante,Sauce piquante,Condiments,Sauce piquante,350ml
+salsa,Salsa,Condiments,Salsa,430ml
+vinaigrettes,Vinaigrettes,Condiments,Vinaigrettes,475ml
+confiture,Confiture,Condiments,Confiture,500ml
+cornichons,Cornichons,Condiments,Cornichons,1L
+olives-marinees,Olives marinées,Condiments,Olives marinées,375ml
+hoummous,Hoummous,Condiments,Hoummous,280g
+sel-table,Sel de table,Condiments,Sel de table,1kg
+poivre-noir,Poivre noir,Condiments,Poivre noir,100g
+herbes-sechees,Herbes séchées,Condiments,Herbes séchées,30g
+pizza-surgelee,Pizza surgelée,Surgelés préparés,Pizza préparée surgelée (non cuite) taille familiale,1u
+lasagne-surgelee,Lasagne surgelée,Surgelés préparés,Lasagne surgelée,1u
+repas-surgele-individuel,Repas surgelé individuel,Surgelés préparés,Repas préparé surgelé en portion individuelle,1u
+pate-viande-surgele,Pâté à la viande surgelé,Surgelés préparés,Pâté à la viande surgelé,1u
+gaufres-surgelees,Gaufres surgelées,Surgelés préparés,Gaufres surgelées,280g
+pommes-frites-surgelees,Pommes frites surgelées,Surgelés préparés,Pommes de terre frites surgelées,1kg
+boulettes-hamburger-surgelees,Boulettes hamburger surgelées,Surgelés préparés,Boulettes à hamburger surgelées,1kg
+croquettes-poulet-surgelees,Croquettes de poulet surgelées,Surgelés préparés,Croquettes de poulet surgelées,800g
+baies-surgelees,Baies surgelées,Surgelés préparés,Baies surgelées,600g
+legumes-surgeles,Légumes surgelés,Surgelés préparés,Légumes surgelés,750g
+jus-orange-pur,Jus d'orange pur,Boissons,Jus d'orange pur,1.65L
+jus-pommes-pur,Jus de pommes pur,Boissons,Jus de pommes pur,1.89L
+autres-jus-fruits,Autres jus de fruits purs,Boissons,Autres jus de fruits purs,1.89L
+boites-jus,Boîtes de jus,Boissons,Boîtes de jus,8x200ml
+boissons-gazeuses-cola,Boissons gazeuses cola,Boissons,Boissons gazeuses de type cola,2L
+boissons-gazeuses-autres,Boissons gazeuses autres,Boissons,Boissons gazeuses autres que les boissons gazeuses de type cola,2L
+boissons-gazeuses,Boissons gazeuses,Boissons,Boissons gazeuses,2L
+eau,Eau,Boissons,Eau,24x500ml
+eau-petillante,Eau pétillante,Boissons,Eau pétillante,1L
+croustilles-pomme-terre,Croustilles de pomme de terre,Collations,Croustilles de pomme de terre,200g
+croustilles-tortillas,Croustilles de tortillas,Collations,Croustilles de tortillas,230g
+mais-souffle,Maïs soufflé,Collations,Maïs soufflé,1u
+barre-chocolat,Barre de chocolat,Collations,Barre de chocolat,1u
+gomme-a-macher,Gomme à mâcher,Collations,Gomme à mâcher,1pkg
+noix,Noix,Collations,Noix,300g
+raisins-secs,Raisins secs,Collations,Raisins secs sans pépins,375g
+huile-cuisson,Huile à cuisson,Épicerie diverse,Huile à cuisson ou à salade,1L
+huile-olive,Huile d'olive extra vierge,Épicerie diverse,Huile d'olive extra vierge,500ml
+beurre-arachide,Beurre d'arachide,Épicerie diverse,Beurre d'arachide,1kg
+beurre-amande,Beurre d'amande,Épicerie diverse,Beurre d'amande,340g
+miel,Miel,Épicerie diverse,Miel,500g
+sirop-erable,Sirop d'érable,Épicerie diverse,Sirop d'érable,540ml
+sucre,Sucre,Épicerie diverse,Sucre,2kg
+cacao,Cacao,Épicerie diverse,Cacao,227g
+cafe-torrefie,Café torréfié,Épicerie diverse,Café torréfié,340g
+cafe-instantane,Café instantané,Épicerie diverse,Café instantané,150g
+cafe-portion-individuelle,Café en portion individuelle,Épicerie diverse,Café moulu en portion individuelle,12u
+sachets-the,Sachets de thé,Épicerie diverse,Sachets de thé,48u
+the-tisanes,Thé tisanes et autres,Épicerie diverse,Thé Tisanes ou autres,20u
+melange-soupe,Mélange à soupe,Épicerie diverse,Mélange à soupe,1pkg
+poudre-gelatine,Poudre de gélatine,Épicerie diverse,Poudre de gélatine avec saveur,85g
+repas-mac-fromage,Repas macaroni et fromage,Épicerie diverse,Repas de macaroni et fromage,225g
+tofu,Tofu,Épicerie diverse,Tofu,450g
+aliments-bebes,Aliments pour bébés,Épicerie diverse,Aliments pour bébés,128ml
+preparation-nourrissons,Préparation nourrissons,Épicerie diverse,Préparation pour nourrissons,900g
+legumes-secs,Légumes secs,Épicerie diverse,Légumes secs,900g
+burgers-plantes,Burgers à base de plantes,Protéines alternatives,Burgers à base de plantes,2u
+saucisses-plantes,Saucisses à base de plantes,Protéines alternatives,Saucisses à base de plantes,1pkg
+proteines-poudre,Protéines en poudre,Protéines alternatives,Protéines en poudre,900g
+poulet-roti-entier,Poulet rôti entier,Viandes fraîches,Poulet rôti entier,1u

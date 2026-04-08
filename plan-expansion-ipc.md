@@ -528,3 +528,4 @@ Use `url_finder.py --batch` to discover URLs for all ~175 products. Manually rev
 5. **Use the existing venv.** Run `source venv/bin/activate` before any Python commands. If new packages are needed, `pip install` and update `requirements.txt`.
 6. **Restart the service after code changes.** Run `sudo systemctl restart epicerie-api` after modifying API or DB code.
 7. **Test the live site.** After frontend changes, verify at https://epicerie.proutgpt.com.
+8. **Update the README.md file when done**

@@ -1,85 +1,283 @@
-"""Price extraction parsers — ported from scrape_fraises.R."""
+"""Price extraction parsers — ported from scrape_fraises.R.
+
+Each parser returns a PriceResult: (price, unit, price_per_kg).
+- price: the displayed/primary price on the page (float)
+- unit: what that price is for — "each", "kg", "lb", "100g", or a weight like "450g"
+- price_per_kg: normalized $/kg (float or None if not available)
+"""
 
 import json
 import re
+from dataclasses import dataclass
 
 from bs4 import BeautifulSoup
 
 
-def price_from_jsonld(html: str) -> float | None:
-    """Extract price from JSON-LD <script> blocks.
+@dataclass
+class PriceResult:
+    price: float            # Display price (as shown on the page)
+    unit: str               # "each", "kg", "lb", "100g", weight like "450g"
+    price_per_kg: float | None  # Normalized $/kg for comparison
+    title: str = ""         # Exact product name from the store page
 
-    Handles both:
-      { "offers": { "price": "4.99" } }
-      { "offers": [{ "price": "4.99" }, ...] }
-    """
+
+# ─── Helpers ──────────────────────────────────────────────────────────
+
+_KG_PRICE_RE = re.compile(r"(\d+)[,.](\d{2})\s*\$?\s*/\s*(?:1\s*)?kg", re.IGNORECASE)
+_LB_PRICE_RE = re.compile(r"(\d+)[,.](\d{2})\s*\$?\s*/\s*(?:1\s*)?lb", re.IGNORECASE)
+LB_TO_KG = 2.20462
+
+
+def _parse_french_price(text: str) -> float | None:
+    """Parse '3,99 $' or '$3.99' from text."""
+    m = re.search(r"(\d+),(\d{2})\s*\$", text)
+    if m:
+        return float(f"{m.group(1)}.{m.group(2)}")
+    m = re.search(r"\$(\d+)\.(\d{2})", text)
+    if m:
+        return float(f"{m.group(1)}.{m.group(2)}")
+    return None
+
+
+def _extract_kg_price(text: str) -> float | None:
+    """Extract $/kg from text like '1,74 $ /kg' or '1.74$/kg'."""
+    m = _KG_PRICE_RE.search(text)
+    if m:
+        return float(f"{m.group(1)}.{m.group(2)}")
+    return None
+
+
+def _extract_lb_price(text: str) -> float | None:
+    """Extract $/lb from text like '0,79 $ /lb'."""
+    m = _LB_PRICE_RE.search(text)
+    if m:
+        return float(f"{m.group(1)}.{m.group(2)}")
+    return None
+
+
+def _lb_to_kg(price_per_lb: float) -> float:
+    return round(price_per_lb * LB_TO_KG, 2)
+
+
+def _detect_unit_from_sale_text(text: str) -> str:
+    """Detect unit from sale price text like 'ch.', '/ 450g', '/kg'."""
+    text_lower = text.lower()
+    if "/kg" in text_lower or "/ kg" in text_lower:
+        return "kg"
+    if "/lb" in text_lower or "/ lb" in text_lower:
+        return "lb"
+    m = re.search(r"/\s*(\d+)\s*g\b", text_lower)
+    if m:
+        return f"{m.group(1)}g"
+    if re.search(r"/\s*100\s*g", text_lower):
+        return "100g"
+    # "ch." or "env.ch." or "chacun" = each
+    return "each"
+
+
+def _parse_jsonld_product(html: str) -> dict | None:
+    """Extract the first JSON-LD Product object from <script> blocks."""
     soup = BeautifulSoup(html, "lxml")
     for tag in soup.find_all("script", type="application/ld+json"):
         try:
             data = json.loads(tag.string)
         except (json.JSONDecodeError, TypeError):
             continue
-
-        offers = data.get("offers")
-        if offers is None:
-            continue
-
-        # offers can be a dict or a list of dicts
-        if isinstance(offers, list):
-            price_str = offers[0].get("price") if offers else None
-        else:
-            price_str = offers.get("price")
-
-        if price_str is not None:
-            try:
-                return float(price_str)
-            except (ValueError, TypeError):
-                continue
+        if data.get("offers") is not None:
+            return data
     return None
 
 
-def price_from_css(html: str, selector: str = ".pi--prices") -> float | None:
-    """Extract price from a CSS selector. Handles French '3,99 $' and English '$3.99'."""
+def price_from_jsonld(html: str) -> float | None:
+    """Extract price from JSON-LD <script> blocks."""
+    data = _parse_jsonld_product(html)
+    if data is None:
+        return None
+    offers = data.get("offers")
+    if isinstance(offers, list):
+        price_str = offers[0].get("price") if offers else None
+    else:
+        price_str = offers.get("price")
+    if price_str is not None:
+        try:
+            return float(price_str)
+        except (ValueError, TypeError):
+            pass
+    return None
+
+
+def _title_from_jsonld(html: str) -> str:
+    """Extract product name from JSON-LD."""
+    data = _parse_jsonld_product(html)
+    if data:
+        return data.get("name", "")
+    return ""
+
+
+def _brand_from_jsonld(html: str) -> str:
+    """Extract brand name from JSON-LD brand.name."""
+    data = _parse_jsonld_product(html)
+    if data:
+        brand = data.get("brand")
+        if isinstance(brand, dict):
+            return brand.get("name", "")
+        if isinstance(brand, str):
+            return brand
+    return ""
+
+
+def _prepend_brand(title: str, brand: str) -> str:
+    """Prepend brand to title if not already present."""
+    if not brand or not title:
+        return title
+    if brand.lower() in title.lower():
+        return title
+    return f"{brand} {title}"
+
+
+# ─── Loblaw-family parsers (Super C, Metro) ──────────────────────────
+# These stores have:
+#   - data-main-price attribute with the display price
+#   - .pricing__sale-price text telling unit (ch., /450g, etc.)
+#   - .pricing__secondary-price with $/kg and $/lb
+
+def _parse_loblaw_html(html: str) -> PriceResult | None:
+    """Parse price + unit from Super C / Metro HTML."""
     soup = BeautifulSoup(html, "lxml")
-    node = soup.select_one(selector)
-    if node is None:
+
+    # Extract title from <h1>, fall back to og:title / JSON-LD
+    h1 = soup.find("h1")
+    title = h1.get_text(strip=True) if h1 else ""
+    # Metro h1 may say "Connectez-vous"; use og:title instead
+    if not title or "connectez" in title.lower():
+        og = soup.find("meta", property="og:title")
+        if og and og.get("content"):
+            # Strip store suffix like " | Metro" or " | Super C"
+            title = re.split(r"\s*\|\s*", og["content"])[0].strip()
+    if not title or "connectez" in title.lower():
+        title = _title_from_jsonld(html)
+
+    # Prepend brand (from .pi--brand element or JSON-LD)
+    brand_el = soup.select_one(".pi--brand")
+    brand = brand_el.get_text(strip=True) if brand_el else _brand_from_jsonld(html)
+    title = _prepend_brand(title, brand)
+
+    price_div = soup.find(attrs={"data-main-price": True})
+    if price_div is None:
+        # Fallback: try JSON-LD
+        price = price_from_jsonld(html)
+        if price is not None:
+            return PriceResult(price=price, unit="each", price_per_kg=None, title=title)
         return None
 
-    txt = node.get_text()
+    price = float(price_div["data-main-price"])
 
-    # French: 3,99 $
-    m = re.search(r"(\d+),(\d{2})\s*\$", txt)
-    if m:
-        return float(f"{m.group(1)}.{m.group(2)}")
+    # Determine unit from sale price text
+    sale_el = price_div.select_one(".pricing__sale-price")
+    sale_text = sale_el.get_text(strip=True) if sale_el else ""
+    unit = _detect_unit_from_sale_text(sale_text)
 
-    # English: $3.99
-    m = re.search(r"\$(\d+)\.(\d{2})", txt)
-    if m:
-        return float(f"{m.group(1)}.{m.group(2)}")
+    # Extract $/kg from secondary price
+    sec_el = price_div.select_one(".pricing__secondary-price")
+    sec_text = sec_el.get_text(strip=True) if sec_el else ""
 
-    return None
+    price_per_kg = _extract_kg_price(sec_text)
+    if price_per_kg is None:
+        price_per_lb = _extract_lb_price(sec_text)
+        if price_per_lb is not None:
+            price_per_kg = _lb_to_kg(price_per_lb)
+
+    # If unit is "kg", the display price IS the per-kg price
+    if unit == "kg" and price_per_kg is None:
+        price_per_kg = price
+
+    return PriceResult(price=price, unit=unit, price_per_kg=price_per_kg, title=title)
 
 
-def parse_superc(html: str) -> float | None:
+def parse_superc(html: str) -> PriceResult | None:
+    return _parse_loblaw_html(html)
+
+
+def parse_metro(html: str) -> PriceResult | None:
+    return _parse_loblaw_html(html)
+
+
+# ─── Maxi parser ─────────────────────────────────────────────────────
+# Maxi uses JSON-LD for the display price.
+# URL suffix _KG or _EA tells us the unit.
+# The page has .comparison-price-list with $/kg and $/lb.
+
+def parse_maxi(html: str, url: str = "") -> PriceResult | None:
     price = price_from_jsonld(html)
     if price is None:
-        price = price_from_css(html, ".pi--prices")
-    return price
+        return None
+
+    title = _title_from_jsonld(html)
+    brand = _brand_from_jsonld(html)
+    title = _prepend_brand(title, brand)
+    soup = BeautifulSoup(html, "lxml")
+
+    # Detect unit — prefer the on-page selling-price text (most reliable),
+    # fall back to URL suffix.
+    url_hint = "kg" if "_KG" in url.upper() else "each"
+    unit = url_hint
+
+    sell_el = soup.select_one(".selling-price-list__item__price--now-price")
+    if sell_el:
+        sell_text = sell_el.get_text(strip=True)
+        unit = _detect_unit_from_sale_text(sell_text)
+
+    # Extract $/kg from the *first* comparison-price entry (main product).
+    # Only do this for weight-priced items OR items where URL says _KG
+    # (bananas URL=_KG but display price is "env. each").
+    price_per_kg = None
+    if unit == "kg" or url_hint == "kg":
+        for el in soup.select(".comparison-price-list__item__price"):
+            text = el.get_text(strip=True)
+            kg_p = _extract_kg_price(text)
+            if kg_p is not None:
+                price_per_kg = kg_p
+                break
+
+        if price_per_kg is None:
+            for el in soup.select(".comparison-price-list__item__price"):
+                text = el.get_text(strip=True)
+                lb_p = _extract_lb_price(text)
+                if lb_p is not None:
+                    price_per_kg = _lb_to_kg(lb_p)
+                    break
+
+        if price_per_kg is None and unit == "kg":
+            price_per_kg = price
+
+    return PriceResult(price=price, unit=unit, price_per_kg=price_per_kg, title=title)
 
 
-def parse_maxi(html: str) -> float | None:
-    return price_from_jsonld(html)
+# ─── IGA parser ──────────────────────────────────────────────────────
+# IGA uses JSON-LD for price. The page's embedded JS has "uom":"KG" or "uom":"EA".
+# The JSON-LD price is in the unit indicated by uom.
 
-
-def parse_metro(html: str) -> float | None:
+def parse_iga(html: str) -> PriceResult | None:
     price = price_from_jsonld(html)
     if price is None:
-        price = price_from_css(html, ".pi--prices")
-    return price
+        return None
 
+    title = _title_from_jsonld(html)
+    brand = _brand_from_jsonld(html)
+    title = _prepend_brand(title, brand)
 
-def parse_iga(html: str) -> float | None:
-    return price_from_jsonld(html)
+    # Extract uom from embedded JS data (double-escaped JSON)
+    uom_match = re.search(r'\\"uom\\":\\"([A-Z]+)\\"', html)
+    if uom_match is None:
+        # Try unescaped (Playwright-rendered)
+        uom_match = re.search(r'"uom":"([A-Z]+)"', html)
+
+    uom = uom_match.group(1) if uom_match else "EA"
+
+    if uom == "KG":
+        return PriceResult(price=price, unit="kg", price_per_kg=price, title=title)
+    else:
+        return PriceResult(price=price, unit="each", price_per_kg=None, title=title)
 
 
 PARSERS = {

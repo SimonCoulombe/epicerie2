@@ -27,11 +27,46 @@ def startup():
 
 
 @app.get("/api/products")
-def list_products():
+def list_products(
+    category: Optional[str] = Query(None, description="Category filter"),
+    has_data: bool = Query(False, description="Only return products with price data"),
+):
     con = get_connection(read_only=True)
     try:
-        rows = con.execute("SELECT id, name, slug FROM products ORDER BY name").fetchall()
-        return [{"id": r[0], "name": r[1], "slug": r[2]} for r in rows]
+        if has_data:
+            query = """
+                SELECT DISTINCT p.id, p.name, p.slug, p.category
+                FROM products p
+                JOIN scrape_targets st ON st.product_id = p.id
+                JOIN prices pr ON pr.scrape_target_id = st.id
+                WHERE pr.price IS NOT NULL
+            """
+            params = []
+            if category:
+                query += " AND p.category = ?"
+                params.append(category)
+            query += " ORDER BY p.name"
+        else:
+            query = "SELECT id, name, slug, category FROM products"
+            params = []
+            if category:
+                query += " WHERE category = ?"
+                params.append(category)
+            query += " ORDER BY name"
+        rows = con.execute(query, params).fetchall()
+        return [{"id": r[0], "name": r[1], "slug": r[2], "category": r[3]} for r in rows]
+    finally:
+        con.close()
+
+
+@app.get("/api/categories")
+def list_categories():
+    con = get_connection(read_only=True)
+    try:
+        rows = con.execute(
+            "SELECT DISTINCT category FROM products WHERE category IS NOT NULL ORDER BY category"
+        ).fetchall()
+        return [r[0] for r in rows]
     finally:
         con.close()
 
@@ -94,7 +129,11 @@ def list_prices(
                 s.address,
                 pr.price,
                 p.name AS product_name,
-                p.slug AS product_slug
+                p.slug AS product_slug,
+                pr.price_unit,
+                pr.price_per_kg,
+                st.url,
+                st.product_title
             FROM prices pr
             JOIN scrape_targets st ON pr.scrape_target_id = st.id
             JOIN products p ON st.product_id = p.id
@@ -136,6 +175,10 @@ def list_prices(
                 "price": float(r[4]) if r[4] is not None else None,
                 "product_name": r[5],
                 "product_slug": r[6],
+                "price_unit": r[7] or "each",
+                "price_per_kg": float(r[8]) if r[8] is not None else None,
+                "url": r[9],
+                "product_title": r[10],
             }
             for r in rows
         ]

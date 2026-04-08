@@ -3,6 +3,7 @@
 (function () {
     "use strict";
 
+    const categorySelect = document.getElementById("category-select");
     const productSelect = document.getElementById("product-select");
     const citySelect = document.getElementById("city-select");
     const chainSelect = document.getElementById("chain-select");
@@ -11,6 +12,9 @@
     const btnSearch = document.getElementById("btn-search");
     const chartDiv = document.getElementById("price-chart");
     const tableBody = document.querySelector("#price-table tbody");
+
+    // All products cache for client-side category filtering
+    var allProducts = [];
 
     // Default date range: last 30 days
     const today = new Date();
@@ -54,15 +58,44 @@
     var COLORS = ["#2563eb", "#dc2626", "#16a34a", "#f59e0b", "#8b5cf6", "#ec4899"];
 
     async function loadFilters() {
-        const [products, cities, chains] = await Promise.all([
-            fetchJSON("/api/products"),
+        const [products, cities, chains, categories] = await Promise.all([
+            fetchJSON("/api/products?has_data=true"),
             fetchJSON("/api/cities"),
             fetchJSON("/api/store-chains"),
+            fetchJSON("/api/categories"),
         ]);
+        allProducts = products;
+
+        // Populate category dropdown
+        categorySelect.innerHTML = '<option value="">Toutes</option>';
+        categories.forEach(function (cat) {
+            var opt = document.createElement("option");
+            opt.value = cat;
+            opt.textContent = cat;
+            categorySelect.appendChild(opt);
+        });
+
         populateSelect(productSelect, products, "slug", "name");
         populateSelect(citySelect, cities, "slug", "name");
         populateSelect(chainSelect, chains, "name", "name");
     }
+
+    function filterProductsByCategory() {
+        var cat = categorySelect.value;
+        var filtered = cat ? allProducts.filter(function (p) { return p.category === cat; }) : allProducts;
+        populateSelect(productSelect, filtered, "slug", "name");
+    }
+
+    categorySelect.addEventListener("change", function () {
+        var cat = categorySelect.value;
+        // Re-fetch products with data for this category
+        var url = "/api/products?has_data=true";
+        if (cat) url += "&category=" + encodeURIComponent(cat);
+        fetchJSON(url).then(function (products) {
+            allProducts = products;
+            populateSelect(productSelect, products, "slug", "name");
+        });
+    });
 
     async function search() {
         const params = new URLSearchParams();
@@ -110,12 +143,28 @@
     function renderChart(data) {
         // Group by store_chain (+ product if multiple)
         var traces = {};
+        var hasKgData = data.some(function (d) { return d.price_per_kg != null; });
+
         data.forEach(function (d) {
             var key = d.store_chain;
             if (d.product_name) key = d.product_name + " — " + d.store_chain;
-            if (!traces[key]) traces[key] = { x: [], y: [], name: key };
+            if (!traces[key]) traces[key] = { x: [], y: [], text: [], name: key };
+
             traces[key].x.push(d.date);
-            traces[key].y.push(d.price);
+            // Use price_per_kg for the chart when available, otherwise display price
+            var chartPrice = (hasKgData && d.price_per_kg != null) ? d.price_per_kg : d.price;
+            traces[key].y.push(chartPrice);
+
+            // Hover text: show both display price + unit and $/kg
+            var hoverParts = [];
+            if (d.price != null) {
+                var unitLabel = d.price_unit || "each";
+                hoverParts.push(d.price.toFixed(2) + " $ / " + unitLabel);
+            }
+            if (d.price_per_kg != null) {
+                hoverParts.push(d.price_per_kg.toFixed(2) + " $/kg");
+            }
+            traces[key].text.push(hoverParts.join("<br>"));
         });
 
         var plotData = Object.keys(traces).map(function (key, i) {
@@ -123,18 +172,21 @@
             return {
                 x: t.x,
                 y: t.y,
+                text: t.text,
                 name: t.name,
                 type: "scatter",
                 mode: "lines+markers",
                 line: { color: COLORS[i % COLORS.length], width: 2 },
                 marker: { size: 6 },
+                hovertemplate: "%{text}<extra>%{fullData.name}</extra>",
             };
         });
 
+        var yTitle = hasKgData ? "Prix ($/kg)" : "Prix ($)";
         var layout = {
             title: "Évolution des prix",
             xaxis: { title: "Date", type: "date" },
-            yaxis: { title: "Prix ($)", tickprefix: "$", rangemode: "tozero" },
+            yaxis: { title: yTitle, tickprefix: "$", rangemode: "tozero" },
             legend: { orientation: "h", y: -0.2 },
             margin: { t: 50, b: 80, l: 60, r: 20 },
             hovermode: "x unified",
@@ -146,17 +198,27 @@
     function renderTable(data) {
         tableBody.innerHTML = "";
         if (data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#6b7280;">Aucune donnée</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7280;">Aucune donnée</td></tr>';
             return;
         }
         data.forEach(function (d) {
             var tr = document.createElement("tr");
+            var priceStr = "—";
+            if (d.price != null) {
+                var unit = d.price_unit || "each";
+                priceStr = d.price.toFixed(2) + " $ / " + escapeHtml(unit);
+            }
+            var kgStr = d.price_per_kg != null ? d.price_per_kg.toFixed(2) + " $/kg" : "—";
+            var linkStr = d.url ? '<a href="' + escapeHtml(d.url) + '" target="_blank" rel="noopener">🔗</a>' : '—';
             tr.innerHTML =
                 "<td>" + escapeHtml(d.date) + "</td>" +
                 "<td>" + escapeHtml(d.product_name || "") + "</td>" +
+                "<td>" + escapeHtml(d.product_title || "") + "</td>" +
                 "<td>" + escapeHtml(d.store_chain) + "</td>" +
                 "<td>" + escapeHtml(d.city) + "</td>" +
-                "<td>" + (d.price != null ? d.price.toFixed(2) + " $" : "—") + "</td>";
+                "<td>" + priceStr + "</td>" +
+                "<td>" + kgStr + "</td>" +
+                "<td>" + linkStr + "</td>";
             tableBody.appendChild(tr);
         });
     }

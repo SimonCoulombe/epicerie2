@@ -18,6 +18,12 @@
     <main>
         <section class="controls">
             <div class="control-group">
+                <label for="category-select">Catégorie</label>
+                <select id="category-select">
+                    <option value="">Toutes</option>
+                </select>
+            </div>
+            <div class="control-group">
                 <label for="product-select">Produit</label>
                 <select id="product-select" multiple></select>
             </div>
@@ -51,9 +57,12 @@
                     <tr>
                         <th>Date</th>
                         <th>Produit</th>
+                        <th>Titre exact</th>
                         <th>Bannière</th>
                         <th>Ville</th>
-                        <th>Prix</th>
+                        <th>Prix affiché</th>
+                        <th>$/kg</th>
+                        <th>Lien</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
