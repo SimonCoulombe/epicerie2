@@ -77,7 +77,8 @@ main {
     letter-spacing: 0.03em;
 }
 
-select, input[type="date"] {
+select,
+input[type="date"] {
     padding: 0.5rem 0.6rem;
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -171,9 +172,11 @@ footer a {
     .controls {
         flex-direction: column;
     }
+
     .control-group {
         min-width: 100%;
     }
+
     header h1 {
         font-size: 1.2rem;
     }

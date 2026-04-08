@@ -4,13 +4,13 @@
     "use strict";
 
     const productSelect = document.getElementById("product-select");
-    const citySelect    = document.getElementById("city-select");
-    const chainSelect   = document.getElementById("chain-select");
-    const dateFrom      = document.getElementById("date-from");
-    const dateTo        = document.getElementById("date-to");
-    const btnSearch     = document.getElementById("btn-search");
-    const chartDiv      = document.getElementById("price-chart");
-    const tableBody     = document.querySelector("#price-table tbody");
+    const citySelect = document.getElementById("city-select");
+    const chainSelect = document.getElementById("chain-select");
+    const dateFrom = document.getElementById("date-from");
+    const dateTo = document.getElementById("date-to");
+    const btnSearch = document.getElementById("btn-search");
+    const chartDiv = document.getElementById("price-chart");
+    const tableBody = document.querySelector("#price-table tbody");
 
     // Default date range: last 30 days
     const today = new Date();
@@ -68,15 +68,15 @@
         const params = new URLSearchParams();
 
         const products = getSelectedValues(productSelect);
-        const cities   = getSelectedValues(citySelect);
-        const chains   = getSelectedValues(chainSelect);
+        const cities = getSelectedValues(citySelect);
+        const chains = getSelectedValues(chainSelect);
 
         // API supports single filter values; fetch per-product if multiple
         if (products.length === 1) params.set("product", products[0]);
-        if (cities.length === 1)   params.set("city", cities[0]);
-        if (chains.length === 1)   params.set("chain", chains[0]);
+        if (cities.length === 1) params.set("city", cities[0]);
+        if (chains.length === 1) params.set("chain", chains[0]);
         if (dateFrom.value) params.set("from", dateFrom.value);
-        if (dateTo.value)   params.set("to", dateTo.value);
+        if (dateTo.value) params.set("to", dateTo.value);
 
         var data;
         if (products.length > 1) {
