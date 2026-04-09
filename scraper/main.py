@@ -26,7 +26,16 @@ _CHAIN_DELAY = {
 _DEFAULT_DELAY = 2.0
 
 # Products where $/kg should never be shown (volume-sold or incomparable units)
-_NO_KG_SLUGS = {"bleuets-frais", "lait-2pct-2l"}
+# These are always sold by unit, volume, or are not comparable by weight across stores.
+_NO_KG_SLUGS = {
+    "ananas",         # sold by each (pineapple)
+    "avocats",        # sold by each (avocado)
+    "bleuets-frais",  # pint (mL), not grams
+    "brocoli",        # sold by each (head)
+    "cantaloup",      # sold by each (melon)
+    "lait-2pct-2l",   # 2L carton, $/L not $/kg
+    "oeufs-gros-12",  # 12 eggs, not by weight
+}
 
 # Retry config
 _MAX_RETRIES = 2
