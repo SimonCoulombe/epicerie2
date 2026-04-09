@@ -223,17 +223,20 @@ def sync_targets(config: dict) -> None:
             city_id = con.execute(
                 "SELECT id FROM cities WHERE slug = ?", [s["city"]]
             ).fetchone()[0]
-            con.execute("""
-                INSERT INTO stores (store_chain_id, city_id, address, postal_code, slug,
-                                    chain_store_id, store_name)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT (slug) DO UPDATE SET
-                    address = excluded.address,
-                    postal_code = excluded.postal_code,
-                    chain_store_id = excluded.chain_store_id,
-                    store_name = excluded.store_name
-            """, [chain_id, city_id, s.get("address"), s.get("postal_code"), s["slug"],
-                  s.get("chain_store_id"), s.get("store_name")])
+            existing = con.execute(
+                "SELECT id FROM stores WHERE slug = ?", [s["slug"]]
+            ).fetchone()
+            if existing:
+                # DuckDB can't UPDATE FK-referenced rows; skip if already exists
+                # City/chain fixes must be done via direct SQL or DB rebuild
+                pass
+            else:
+                con.execute("""
+                    INSERT INTO stores (store_chain_id, city_id, address, postal_code,
+                                        slug, chain_store_id, store_name)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, [chain_id, city_id, s.get("address"), s.get("postal_code"),
+                      s["slug"], s.get("chain_store_id"), s.get("store_name")])
 
         # ── Scrape targets from CSV ───────────────────────────────────
         if TARGETS_CSV.exists():

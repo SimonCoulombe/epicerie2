@@ -25,6 +25,7 @@ class PriceResult:
 
 _KG_PRICE_RE = re.compile(r"(\d+)[,.](\d{2})\s*\$?\s*/\s*(?:1\s*)?kg", re.IGNORECASE)
 _LB_PRICE_RE = re.compile(r"(\d+)[,.](\d{2})\s*\$?\s*/\s*(?:1\s*)?lb", re.IGNORECASE)
+_100G_PRICE_RE = re.compile(r"(\d+)[,.](\d{2})\s*\$?\s*/\s*100\s*(?:g|ml)", re.IGNORECASE)
 LB_TO_KG = 2.20462
 
 
@@ -50,6 +51,14 @@ def _extract_kg_price(text: str) -> float | None:
 def _extract_lb_price(text: str) -> float | None:
     """Extract $/lb from text like '0,79 $ /lb'."""
     m = _LB_PRICE_RE.search(text)
+    if m:
+        return float(f"{m.group(1)}.{m.group(2)}")
+    return None
+
+
+def _extract_100g_price(text: str) -> float | None:
+    """Extract $/100g or $/100ml from text like '0,37 $ /100g'."""
+    m = _100G_PRICE_RE.search(text)
     if m:
         return float(f"{m.group(1)}.{m.group(2)}")
     return None
@@ -186,6 +195,10 @@ def _parse_loblaw_html(html: str) -> PriceResult | None:
         price_per_lb = _extract_lb_price(sec_text)
         if price_per_lb is not None:
             price_per_kg = _lb_to_kg(price_per_lb)
+    if price_per_kg is None:
+        price_per_100g = _extract_100g_price(sec_text)
+        if price_per_100g is not None:
+            price_per_kg = round(price_per_100g * 10, 2)
 
     # If unit is "kg", the display price IS the per-kg price
     if unit == "kg" and price_per_kg is None:
@@ -227,28 +240,31 @@ def parse_maxi(html: str, url: str = "") -> PriceResult | None:
         sell_text = sell_el.get_text(strip=True)
         unit = _detect_unit_from_sale_text(sell_text)
 
-    # Extract $/kg from the *first* comparison-price entry (main product).
-    # Only do this for weight-priced items OR items where URL says _KG
-    # (bananas URL=_KG but display price is "env. each").
+    # Extract $/kg from the product-details-page comparison price only.
+    # Scoping to --product-details-page avoids picking up the bulk/loose
+    # comparison prices shown on product-tile cards in the carousel.
     price_per_kg = None
-    if unit == "kg" or url_hint == "kg":
-        for el in soup.select(".comparison-price-list__item__price"):
-            text = el.get_text(strip=True)
-            kg_p = _extract_kg_price(text)
-            if kg_p is not None:
-                price_per_kg = kg_p
-                break
+    pdp_sel = (
+        ".comparison-price-list--product-details-page "
+        ".comparison-price-list__item__price"
+    )
+    for el in soup.select(pdp_sel):
+        text = el.get_text(strip=True)
+        kg_p = _extract_kg_price(text)
+        if kg_p is not None:
+            price_per_kg = kg_p
+            break
+        lb_p = _extract_lb_price(text)
+        if lb_p is not None:
+            price_per_kg = _lb_to_kg(lb_p)
+            break
+        p100g = _extract_100g_price(text)
+        if p100g is not None:
+            price_per_kg = round(p100g * 10, 2)
+            break
 
-        if price_per_kg is None:
-            for el in soup.select(".comparison-price-list__item__price"):
-                text = el.get_text(strip=True)
-                lb_p = _extract_lb_price(text)
-                if lb_p is not None:
-                    price_per_kg = _lb_to_kg(lb_p)
-                    break
-
-        if price_per_kg is None and unit == "kg":
-            price_per_kg = price
+    if price_per_kg is None and unit == "kg":
+        price_per_kg = price
 
     return PriceResult(price=price, unit=unit, price_per_kg=price_per_kg, title=title)
 
@@ -286,3 +302,39 @@ PARSERS = {
     "metro": parse_metro,
     "iga": parse_iga,
 }
+
+
+# ─── Post-processing: compute $/kg from title weight ─────────────────
+
+_WEIGHT_KG_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*kg\b", re.IGNORECASE)
+_WEIGHT_G_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*g\b", re.IGNORECASE)
+_WEIGHT_LB_RE = re.compile(r"(\d+(?:[.,]\d+)?)\s*lb\b", re.IGNORECASE)
+
+
+def _weight_kg_from_title(title: str) -> float | None:
+    """Extract weight in kg from product title. Returns None if not found."""
+    m = _WEIGHT_KG_RE.search(title)
+    if m:
+        return float(m.group(1).replace(",", "."))
+    m = _WEIGHT_G_RE.search(title)
+    if m:
+        grams = float(m.group(1).replace(",", "."))
+        if grams >= 50:  # ignore tiny numbers that aren't weights
+            return grams / 1000.0
+    m = _WEIGHT_LB_RE.search(title)
+    if m:
+        lbs = float(m.group(1).replace(",", "."))
+        return lbs / LB_TO_KG
+    return None
+
+
+def enrich_price_per_kg(result: PriceResult) -> PriceResult:
+    """If price_per_kg is missing but title contains weight, compute it."""
+    if result.price_per_kg is not None:
+        return result
+    if result.unit != "each":
+        return result
+    weight_kg = _weight_kg_from_title(result.title)
+    if weight_kg and weight_kg > 0:
+        result.price_per_kg = round(result.price / weight_kg, 2)
+    return result

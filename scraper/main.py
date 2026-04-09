@@ -15,7 +15,7 @@ import yaml
 
 from scraper.browser import PlaywrightBrowser
 from scraper.db import sync_targets, get_active_targets, upsert_price, update_target_status
-from scraper.parsers import PARSERS, PriceResult
+from scraper.parsers import PARSERS, PriceResult, enrich_price_per_kg
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "targets.yaml"
 
@@ -24,6 +24,9 @@ _CHAIN_DELAY = {
     "IGA": 1.0,
 }
 _DEFAULT_DELAY = 2.0
+
+# Products where $/kg should never be shown (volume-sold or incomparable units)
+_NO_KG_SLUGS = {"bleuets-frais", "lait-2pct-2l"}
 
 # Retry config
 _MAX_RETRIES = 2
@@ -95,6 +98,11 @@ async def _scrape_one(target: dict, browser: PlaywrightBrowser, today: date) -> 
                 result = parser_fn(html, url=target["url"])
             else:
                 result = parser_fn(html)
+            # Compute $/kg from title weight when parser didn't find it
+            if result is not None:
+                result = enrich_price_per_kg(result)
+                if target["product_slug"] in _NO_KG_SLUGS:
+                    result.price_per_kg = None
         except Exception as e:
             result = None
             if attempt < _MAX_RETRIES:
@@ -157,11 +165,20 @@ async def _worker(chain_name: str, targets: list[dict],
     return successes, failures
 
 
-async def run() -> None:
+async def run(product_filter: str | None = None,
+              store_filter: str | None = None,
+              chain_filter: str | None = None) -> None:
     config = _load_config()
     sync_targets(config)
 
     targets = get_active_targets()
+    if product_filter:
+        targets = [t for t in targets if t["product_slug"] == product_filter]
+    if store_filter:
+        targets = [t for t in targets if t["store_slug"] == store_filter]
+    if chain_filter:
+        targets = [t for t in targets
+                   if t["chain_name"].lower() == chain_filter.lower()]
     if not targets:
         print("No active scrape targets found.")
         return
@@ -207,7 +224,18 @@ async def run() -> None:
 
 
 def main():
-    asyncio.run(run())
+    import argparse
+    parser = argparse.ArgumentParser(description="Scrape grocery prices")
+    parser.add_argument("--product", help="Product slug filter (e.g. lait-2pct-2l)")
+    parser.add_argument("--store", help="Store slug filter (e.g. superc-default)")
+    parser.add_argument("--chain", help="Chain name filter (e.g. IGA, Maxi)")
+    args = parser.parse_args()
+
+    asyncio.run(run(
+        product_filter=args.product,
+        store_filter=args.store,
+        chain_filter=args.chain,
+    ))
 
 
 if __name__ == "__main__":

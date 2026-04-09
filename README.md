@@ -16,7 +16,7 @@ Data is stored in DuckDB, served via a FastAPI JSON API, and visualized with a P
 
 Ananas, Avocats, Bananes, Beurre 454g, Bleuets frais, Bœuf haché, Brocoli, Cantaloup,
 Fraises 454g, Lait 2% 2L, Oranges, Poires fraîches, Poitrine de poulet, Pommes, Raisins frais
-
+v
 ### Stores tracked (all in Lévis, QC)
 
 | Chain | Store | Address | Chain Store ID |
@@ -68,8 +68,7 @@ epicerie2/
 ├── plan-expansion-ipc.md       # Expansion plan: 194 CPI products
 ├── epicerie-api.service        # systemd unit file
 ├── epicerie-nginx.conf         # nginx site config
-├── scrape_fraises.R            # Original R scraper (reference only, unused)
-└── prix_fraises.csv            # Original CSV data (migrated to DuckDB on first run)
+└── prix_fraises.csv            # Original strawberry CSV data (migrated to DuckDB on first run)
 ```
 
 ## Tech Stack
@@ -155,6 +154,14 @@ These are passed via httpx. No Playwright context is created for IGA targets.
 
 ### `scraper/parsers.py` — Price Extraction
 
+`enrich_price_per_kg(result)` runs after parsing. If `price_per_kg` is still `None` and the
+product title contains a weight (e.g. `"454g"`, `"3lb"`), it computes `$/kg = price / weight_kg`.
+
+Some products are sold by volume or in incomparable units across stores. For these, `price_per_kg`
+is suppressed entirely (set to `NULL`) via `_NO_KG_SLUGS` in `main.py`:
+- **bleuets-frais** — pint containers (170 mL), stores report mL not grams
+- **lait-2pct-2l** — 2 L cartons; comparison would be $/L, not $/kg
+
 All 4 stores embed structured data as JSON-LD in their product pages. Primary strategy for all:
 
 ```python
@@ -218,8 +225,8 @@ scrape_targets (
     use_playwright BOOLEAN,
     active BOOLEAN DEFAULT TRUE,
     parser VARCHAR,
-    last_success_at TIMESTAMP,
-    consecutive_failures INTEGER DEFAULT 0,
+    last_success DATE,
+    fail_count INTEGER DEFAULT 0,
     product_title VARCHAR,      -- last scraped title (for URL validation)
     UNIQUE(product_id, store_id)
 )
@@ -230,7 +237,7 @@ prices (
     date DATE,
     price DECIMAL(8,2),
     price_unit VARCHAR,         -- "each", "kg", etc.
-    price_per_kg DECIMAL(8,4),  -- normalized comparison price
+    price_per_kg DECIMAL(8,2),  -- normalized $/kg comparison (NULL if not applicable)
     scraped_at TIMESTAMP,
     UNIQUE(scrape_target_id, date)
 )
