@@ -198,7 +198,7 @@
     function renderTable(data) {
         tableBody.innerHTML = "";
         if (data.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7280;">Aucune donnée</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#6b7280;">Aucune donnée</td></tr>';
             return;
         }
         data.forEach(function (d) {
@@ -215,6 +215,7 @@
                 "<td>" + escapeHtml(d.product_name || "") + "</td>" +
                 "<td>" + escapeHtml(d.product_title || "") + "</td>" +
                 "<td>" + escapeHtml(d.store_chain) + "</td>" +
+                "<td>" + escapeHtml(d.store_name || "") + "</td>" +
                 "<td>" + escapeHtml(d.city) + "</td>" +
                 "<td>" + priceStr + "</td>" +
                 "<td>" + kgStr + "</td>" +

@@ -62,7 +62,9 @@ def _create_tables(con: duckdb.DuckDBPyConnection) -> None:
             city_id INTEGER REFERENCES cities(id),
             address VARCHAR,
             postal_code VARCHAR,
-            slug VARCHAR UNIQUE NOT NULL
+            slug VARCHAR UNIQUE NOT NULL,
+            chain_store_id VARCHAR,
+            store_name VARCHAR
         );
 
         CREATE SEQUENCE IF NOT EXISTS seq_targets START 1;
@@ -106,6 +108,8 @@ def _migrate_schema(con: duckdb.DuckDBPyConnection) -> None:
         "ALTER TABLE prices ADD COLUMN IF NOT EXISTS price_unit VARCHAR DEFAULT 'each'",
         "ALTER TABLE prices ADD COLUMN IF NOT EXISTS price_per_kg DECIMAL(8,2)",
         "ALTER TABLE scrape_targets ADD COLUMN IF NOT EXISTS product_title VARCHAR",
+        "ALTER TABLE stores ADD COLUMN IF NOT EXISTS chain_store_id VARCHAR",
+        "ALTER TABLE stores ADD COLUMN IF NOT EXISTS store_name VARCHAR",
     ]
     for sql in migrations:
         try:
@@ -220,10 +224,16 @@ def sync_targets(config: dict) -> None:
                 "SELECT id FROM cities WHERE slug = ?", [s["city"]]
             ).fetchone()[0]
             con.execute("""
-                INSERT INTO stores (store_chain_id, city_id, address, postal_code, slug)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT (slug) DO NOTHING
-            """, [chain_id, city_id, s.get("address"), s.get("postal_code"), s["slug"]])
+                INSERT INTO stores (store_chain_id, city_id, address, postal_code, slug,
+                                    chain_store_id, store_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (slug) DO UPDATE SET
+                    address = excluded.address,
+                    postal_code = excluded.postal_code,
+                    chain_store_id = excluded.chain_store_id,
+                    store_name = excluded.store_name
+            """, [chain_id, city_id, s.get("address"), s.get("postal_code"), s["slug"],
+                  s.get("chain_store_id"), s.get("store_name")])
 
         # ── Scrape targets from CSV ───────────────────────────────────
         if TARGETS_CSV.exists():
@@ -294,7 +304,8 @@ def get_active_targets() -> list[dict]:
                 s.slug AS store_slug,
                 st.url,
                 st.use_playwright,
-                st.parser
+                st.parser,
+                s.chain_store_id
             FROM scrape_targets st
             JOIN products p ON st.product_id = p.id
             JOIN stores s ON st.store_id = s.id
@@ -303,7 +314,8 @@ def get_active_targets() -> list[dict]:
             WHERE st.active = TRUE
         """).fetchall()
         columns = ["target_id", "product_slug", "product_name", "chain_name",
-                    "city_slug", "store_slug", "url", "use_playwright", "parser"]
+                    "city_slug", "store_slug", "url", "use_playwright", "parser",
+                    "chain_store_id"]
         return [dict(zip(columns, row)) for row in rows]
     finally:
         con.close()

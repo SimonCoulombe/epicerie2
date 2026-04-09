@@ -43,7 +43,19 @@ def _get_parser_key(target: dict) -> str:
     return target["store_slug"].split("-")[0]
 
 
-async def _fetch_plain(url: str) -> str:
+def _store_cookies(target: dict) -> dict[str, str]:
+    """Build store-selection cookies for httpx based on chain."""
+    chain = target.get("chain_name", "")
+    store_id = target.get("chain_store_id", "")
+    if chain == "IGA" and store_id:
+        return {
+            "storeId": f"{store_id}_Quebec",
+            "selected_store_region": "Quebec",
+        }
+    return {}
+
+
+async def _fetch_plain(url: str, target: dict | None = None) -> str:
     """Fetch HTML directly via httpx (no JS rendering)."""
     headers = {
         "User-Agent": "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 "
@@ -51,8 +63,9 @@ async def _fetch_plain(url: str) -> str:
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "fr-CA,fr;q=0.9,en;q=0.5",
     }
+    cookies = _store_cookies(target) if target else {}
     async with httpx.AsyncClient(follow_redirects=True, timeout=30) as client:
-        resp = await client.get(url, headers=headers)
+        resp = await client.get(url, headers=headers, cookies=cookies)
         resp.raise_for_status()
         return resp.text
 
@@ -70,9 +83,13 @@ async def _scrape_one(target: dict, browser: PlaywrightBrowser, today: date) -> 
     for attempt in range(_MAX_RETRIES + 1):
         try:
             if target["use_playwright"]:
-                html = await browser.fetch_html(target["url"])
+                html = await browser.fetch_html(
+                    target["url"],
+                    chain=target["chain_name"],
+                    chain_store_id=target.get("chain_store_id"),
+                )
             else:
-                html = await _fetch_plain(target["url"])
+                html = await _fetch_plain(target["url"], target)
             # parse_maxi needs the URL to detect unit from suffix
             if parser_key == "maxi":
                 result = parser_fn(html, url=target["url"])
@@ -164,6 +181,12 @@ async def run() -> None:
     needs_browser = any(t["use_playwright"] for t in targets)
     if needs_browser:
         await browser.start()
+
+        # Set up store selection for each chain before scraping
+        for chain_name, chain_targets in by_chain.items():
+            chain_store_id = chain_targets[0].get("chain_store_id")
+            if chain_store_id:
+                await browser.setup_chain(chain_name, chain_store_id)
 
     try:
         # Launch one worker per chain in parallel

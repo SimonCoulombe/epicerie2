@@ -133,7 +133,8 @@ def list_prices(
                 pr.price_unit,
                 pr.price_per_kg,
                 st.url,
-                st.product_title
+                st.product_title,
+                s.store_name
             FROM prices pr
             JOIN scrape_targets st ON pr.scrape_target_id = st.id
             JOIN products p ON st.product_id = p.id
@@ -179,6 +180,7 @@ def list_prices(
                 "price_per_kg": float(r[8]) if r[8] is not None else None,
                 "url": r[9],
                 "product_title": r[10],
+                "store_name": r[11],
             }
             for r in rows
         ]

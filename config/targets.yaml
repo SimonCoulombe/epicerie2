@@ -3,29 +3,37 @@ products:
     slug: "fraises-454g"
 
 cities:
-  - name: "Default"
-    slug: "default"
+  - name: "Lévis"
+    slug: "levis"
 
 stores:
   - chain: "Super C"
-    city: "default"
-    address: null
-    postal_code: null
+    city: "levis"
+    chain_store_id: "633"
+    store_name: "Super C - Lévis"
+    address: "1400 Boulevard Alphonse-Desjardins"
+    postal_code: "G6V 9X7"
     slug: "superc-default"
   - chain: "Maxi"
-    city: "default"
-    address: null
-    postal_code: null
+    city: "levis"
+    chain_store_id: "8939"
+    store_name: "Maxi Lévis President Kennedy"
+    address: "50, rte. du President Kennedy, St 190"
+    postal_code: "G6V 6W8"
     slug: "maxi-default"
   - chain: "Metro"
-    city: "default"
-    address: null
-    postal_code: null
+    city: "levis"
+    chain_store_id: "82"
+    store_name: "Alimentation Maxime Faucher"
+    address: "8032 Avenue Des Églises"
+    postal_code: "G6X 1X7"
     slug: "metro-default"
   - chain: "IGA"
-    city: "default"
-    address: null
-    postal_code: null
+    city: "levis"
+    chain_store_id: "8490"
+    store_name: "IGA Lévis (Sobeys Capital inc.)"
+    address: "3950 blv. Guillaume-Couture"
+    postal_code: "G6W 1H7"
     slug: "iga-default"
 
 targets:
