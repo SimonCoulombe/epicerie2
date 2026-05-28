@@ -8,7 +8,7 @@ Data is stored in DuckDB, served via a FastAPI JSON API, and visualized with a P
 
 ## Current Status
 
-- **15 products** tracked across **4 stores** = **72 active scrape targets** (all passing)
+- **15 products** tracked across **4 stores** = **54 active targets** on Oracle VM + **18 IGA targets** scraped from Raspberry Pi (residential IP required — see [IGA Pi Bridge](#iga-pi-bridge))
 - **194 products defined** in `config/products.csv` (full StatCan CPI basket), ~179 awaiting URL discovery
 - **Next step:** Use `url_finder.py` to discover URLs for the remaining ~179 products → see [plan-expansion-ipc.md](plan-expansion-ipc.md)
 
@@ -32,12 +32,16 @@ v
 Browser → nginx (HTTPS + rate limiting)
                ├── /       → static frontend (Plotly.js charts)
                └── /api/*  → FastAPI (uvicorn, port 8000) → DuckDB
-Cron (8 AM ET) → scraper → DuckDB
-  ├── 1 async worker per chain (Metro, SuperC, Maxi, IGA) — parallel
+
+Oracle VM cron (8 AM ET) → scraper.main → DuckDB
+  ├── 1 async worker per chain (Metro, SuperC, Maxi) — parallel
   │   └── Each worker scrapes its targets sequentially (rate-limited)
   ├── Playwright + 2-context trick (Metro/SuperC) → HTML → JSON-LD parser
-  ├── Playwright + store cookie (Maxi)             → HTML → JSON-LD parser
-  └── httpx + store cookie (IGA)                  → HTML → JSON-LD parser
+  └── Playwright + store cookie (Maxi)             → HTML → JSON-LD parser
+
+Raspberry Pi cron (7:30 AM ET) → scrape_iga.py (residential IP)
+  └── stdlib urllib → JSON-LD parser → JSON stdout
+      └── SSH pipe → import_iga.py on Oracle VM → DuckDB
 ```
 
 ## Project Structure
@@ -75,13 +79,14 @@ epicerie2/
 
 - **Python 3.12** — venv at `/home/ubuntu/epicerie2/venv`
 - **Playwright 1.58.0** — headless Chromium (ARM64), stealth anti-bot
-- **httpx 0.28.1** — plain HTTP fetcher for IGA (no Playwright needed)
+- **httpx 0.28.1** — plain HTTP fetcher (Metro/SuperC/Maxi store setup calls)
 - **DuckDB 1.5.1** — embedded DB at `data/epicerie.duckdb`
 - **FastAPI 0.135.3** — JSON API, uvicorn on port 8000
 - **Plotly.js 2.35.2** — frontend charts (CDN)
 - **OpenRouter API** — `google/gemini-2.5-flash` for url_finder.py (key in `~/.env` as `OPENROUTER_API_KEY`)
 - **nginx** — SSL (Let's Encrypt), rate limiting, static serving
 - **Ubuntu 22.04** — ARM64 VM, America/Toronto timezone
+- **Raspberry Pi 2** (`simon@192.168.2.14`) — IGA scraper only; pure Python stdlib (no extra deps); residential IP bypasses Akamai block
 
 ---
 
@@ -184,7 +189,7 @@ Parser dispatch is keyed by the `parser` field in `targets.csv` (or store slug p
 | Parser | Strategy | Notes |
 |--------|----------|-------|
 | `parse_superc` | JSON-LD first, `.pi--prices` CSS fallback | |
-| `parse_metro` | JSON-LD first, `.pi--prices` CSS fallback | |
+| `parse_metro` | Scopes `data-main-price` lookup to `.product-info` to skip carousel tiles | Metro added a promoted-product widget (May 2026) whose div also carries `data-main-price`; page-wide `find()` returned the widget price for every product |
 | `parse_maxi` | JSON-LD; URL suffix `_KG` vs `_EA` determines unit | |
 | `parse_iga` | JSON-LD only | IGA's structured data is reliable |
 
@@ -334,6 +339,13 @@ store-selection logic in `browser.py`. Key fields:
 
 ## Anti-bot / Cloudflare Notes
 
+### IGA — Akamai IP block
+
+IGA uses Akamai Bot Manager. Oracle Cloud VM IPs are blocked at the network level regardless
+of browser fingerprinting or headers. Plain `httpx` from a residential IP works fine.
+See [IGA Pi Bridge](#iga-pi-bridge) for the scraping architecture.
+
+
 **The problem:** Metro and Super C serve product pages through Cloudflare. Visiting the
 store-selection page and then a product page in the same browser context triggers bot detection.
 
@@ -349,6 +361,54 @@ cookie from a discarded setup context.
 - No extra HTTP headers or JS overrides beyond the above
 
 ---
+
+
+## IGA Pi Bridge
+
+IGA uses Akamai Bot Manager which blocks all Oracle Cloud IP ranges. Workaround: scrape IGA
+from a Raspberry Pi on a home network (residential IP).
+
+### Architecture
+
+```
+Pi (residential IP, 7:30 AM ET)
+  scrape_iga.py
+    → urllib.request (pure stdlib, no extra deps)
+    → 18 IGA product pages → JSON-LD price parser
+    → JSON to stdout
+    → SSH pipe to Oracle VM
+         import_iga.py
+           → DuckDB upsert (same prices table)
+```
+
+### Files
+
+| File | Location | Purpose |
+|------|----------|---------|
+| `scrape_iga.py` | Pi: `~/scrape_iga.py` | Fetches 18 IGA targets, outputs JSON |
+| `import_iga.py` | Oracle VM: `~/epicerie2/import_iga.py` | Reads JSON from stdin, upserts to DuckDB |
+
+### Pi cron (simon@192.168.2.14)
+
+```
+30 7 * * * python3 /home/simon/scrape_iga.py 2>>/home/simon/scrape_iga.log | ssh ubuntu@148.116.71.245 "cd ~/epicerie2 && venv/bin/python import_iga.py" >>/home/simon/scrape_iga.log 2>&1
+```
+
+### IGA targets in DuckDB
+
+IGA `scrape_targets` are set to `active = FALSE` on the Oracle VM so `scraper.main` skips them.
+The Pi's `import_iga.py` calls `update_target_status(success=True)` after each upsert.
+
+### Pi SSH key
+
+Pi uses `~/.ssh/id_ed25519` (ed25519, comment: `pi-iga-scraper`).
+Public key is in Oracle VM's `~/.ssh/authorized_keys`.
+
+### Checking Pi logs
+
+```bash
+ssh simon@192.168.2.14 "tail -40 ~/scrape_iga.log"
+```
 
 ## Setup on a New VM
 
@@ -432,6 +492,8 @@ crontab -e
 # Add:
 0 8 * * * cd /home/ubuntu/epicerie2 && /home/ubuntu/epicerie2/venv/bin/python -m scraper.main >> /home/ubuntu/epicerie2/logs/scrape.log 2>&1
 ```
+
+IGA is scraped from the Raspberry Pi at 7:30 AM (30 min before Oracle VM) — see [IGA Pi Bridge](#iga-pi-bridge).
 
 ## API Endpoints
 
