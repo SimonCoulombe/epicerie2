@@ -171,7 +171,10 @@ def _parse_loblaw_html(html: str) -> PriceResult | None:
     brand = brand_el.get_text(strip=True) if brand_el else _brand_from_jsonld(html)
     title = _prepend_brand(title, brand)
 
-    price_div = soup.find(attrs={"data-main-price": True})
+    # Scope to .product-info to skip carousel/promoted tiles that appear
+    # above the product and also carry data-main-price (Metro layout, May 2026+)
+    product_info = soup.select_one('.product-info')
+    price_div = (product_info or soup).find(attrs={'data-main-price': True})
     if price_div is None:
         # Fallback: try JSON-LD
         price = price_from_jsonld(html)
