@@ -440,31 +440,38 @@ Voici les résultats de recherche venant de 4 bannières d'épicerie québécois
 RÈGLES DE SÉLECTION (par ordre de priorité):
 
 1. **Même type de produit**: Le produit doit être du même type que ce qui est recherché.
-   Exemple: pour "bœuf haché mi-maigre", ne prends PAS du bœuf haché maigre ou extra-maigre.
+    Exemple: pour "bœuf haché mi-maigre", ne prends PAS du bœuf haché maigre ou extra-maigre.
 
 2. **Même qualité/grade**: "mi-maigre" ≠ "maigre" ≠ "extra-maigre". "Blé entier" ≠ "blanc".
-   Les niveaux de qualité différents donnent des prix différents et ne sont pas comparables.
+    Les niveaux de qualité différents donnent des prix différents et ne sont pas comparables.
 
-3. **Même marque si possible**: Si une marque premium (ex: POM, Natrel, Lactantia, Villaggio, St-Méthode, Catelli, Barilla) est disponible dans les 4 magasins, choisis-la partout.
-   - Si une marque premium n'est pas disponible partout, bascule vers une marque maison PARTOUT.
+3. **Même marque si possible**: Si une marque premium (ex: POM, Natrel, Lactantia, Villaggio, St-Méthode, Catelli, Barilla, Québon) est disponible dans les 4 magasins, choisis-la partout.
+    - Si une marque premium n'est pas disponible partout, bascule vers une marque maison PARTOUT.
+    - Si 2 magasisn on des marques différentes, ne fixe pas l'URL pour ces magasins à la 1ere ronde et fait la 2e ronde de recherche pour ces magasins afin de permettre un appariement.
 
 4. **Marques maison interchangeables**: Les marques suivantes sont des marques maison ("store brands") équivalentes entre elles:
-   - "Sélection" / "Selection" (Metro, Super C)
-   - "Sans Nom" / "No Name" (Maxi)
-   - "Nos Compliments" / "Compliments" (IGA)
-   - "Le Choix du Président" / "President's Choice" (Maxi, Loblaw)
-   Il est acceptable de comparer "Selection" vs "Sans Nom" vs "Compliments" car ce sont toutes des marques maison.
+    - "Sélection" / "Selection" (Metro, Super C)
+    - "Sans Nom" / "No Name" (Maxi)
+    - "Nos Compliments" / "Compliments" (IGA)
+    - "Le Choix du Président" / "President's Choice" (Maxi, Loblaw)
+    Il est acceptable de comparer "Selection" vs "Sans Nom" vs "Compliments" car ce sont toutes des marques maison.
 
 5. **Même modèle/variante pour marque premium**: Si on choisit POM, il faut le MÊME type de pain POM dans les 4 magasins (ex: tous "blanc ultramoelleux", pas "raisin" dans un et "blé" dans un autre).
 
 6. **Format/poids le plus proche**: Préfère le format qui correspond à "{product_unit}".
 
-7. **IMPORTANT: Préfère un produit imparfait à NONE.** N'utilise NONE que si le magasin n'a AUCUN produit du même type (ex: pas de pain du tout). Un pain "tranché épais" reste un pain blanc tranché. Un "D'Italiano" reste du pain blanc même si les autres ont du POM. Choisis toujours le produit le plus proche disponible.
+7. **Même emballage/matériau si possible**: Privilégie le même type d'emballage ou de contenant (ex: "cruchon de plastique" vs "carton" pour le lait, barquette plastique vs sac papier, etc). Si le format plastique existe dans plusieurs magasins, préfère-le à un carton.
+
+8. **IMPORTANT: Préfère un produit imparfait à NONE.** N'utilise NONE que si le magasin n'a AUCUN produit du même type (ex: pas de pain du tout). Un pain "tranché épais" reste un pain blanc tranché. Un "D'Italiano" reste du pain blanc même si les autres ont du POM. Choisis toujours le produit le plus proche disponible.
 
 {candidate_text}
 
+Ensuite, réponds à la question suivante:
+**Ce produit devrait-il être ajouté à la liste _NO_KG_SLUGS (jamais afficher $/kg)?**
+Réponds par true ou false, et explique brièvement pourquoi (ex: vendu uniquement à l'unité, volume, ou formats incomparables).
+
 Réponds avec un bloc JSON valide (sans markdown ```, juste le JSON brut) ayant cette structure exacte:
-{{"superc": "URL_ou_NONE", "maxi": "URL_ou_NONE", "metro": "URL_ou_NONE", "iga": "URL_ou_NONE", "reasoning": "explication courte en français"}}"""
+{{"superc": "URL_ou_NONE", "maxi": "URL_ou_NONE", "metro": "URL_ou_NONE", "iga": "URL_ou_NONE", "reasoning": "explication courte en français", "no_kg_slug": true/false, "no_kg_reason": "explication courte"}}"""
 
     try:
         async with httpx.AsyncClient(timeout=90) as client:
