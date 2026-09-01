@@ -16,6 +16,7 @@ import yaml
 from scraper.browser import PlaywrightBrowser
 from scraper.db import sync_targets, get_active_targets, upsert_price, update_target_status
 from scraper.parsers import PARSERS, PriceResult, enrich_price_per_kg
+from scraper.store_apis import fetch_maxi_product, fetch_metro_family_fragment
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "targets.yaml"
 
@@ -94,19 +95,24 @@ async def _scrape_one(target: dict, browser: PlaywrightBrowser, today: date) -> 
 
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            if target["use_playwright"]:
+            if chain in ("Metro", "Super C"):
+                html = await fetch_metro_family_fragment(
+                    chain, target["url"], target["chain_store_id"])
+                result = parser_fn(html)
+            elif chain == "Maxi":
+                result = await fetch_maxi_product(
+                    target["product_name"], target["url"],
+                    target["chain_store_id"])
+            elif target["use_playwright"]:
                 html = await browser.fetch_html(
                     target["url"],
                     chain=target["chain_name"],
                     chain_store_id=target.get("chain_store_id"),
                 )
+                result = parser_fn(html, url=target["url"]) if parser_key == "maxi" else parser_fn(html)
             else:
                 html = await _fetch_plain(target["url"], target)
-            # parse_maxi needs the URL to detect unit from suffix
-            if parser_key == "maxi":
-                result = parser_fn(html, url=target["url"])
-            else:
-                result = parser_fn(html)
+                result = parser_fn(html, url=target["url"]) if parser_key == "maxi" else parser_fn(html)
             # Compute $/kg from title weight when parser didn't find it
             if result is not None:
                 result = enrich_price_per_kg(result)
@@ -204,7 +210,10 @@ async def run(product_filter: str | None = None,
 
     # Start browser (shared across all workers)
     browser = PlaywrightBrowser()
-    needs_browser = any(t["use_playwright"] for t in targets)
+    needs_browser = any(
+        t["use_playwright"] and t["chain_name"] not in ("Metro", "Super C", "Maxi")
+        for t in targets
+    )
     if needs_browser:
         await browser.start()
 
